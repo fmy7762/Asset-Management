@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="apple-touch-icon" href="https://i.ibb.co/pvMkQkDm/3e405a42e99bb009829f975204cd69d1-png.png">
+  <title>💰収支管理アプリ</title>
+  <meta name="apple-mobile-web-app-title" content="💰収支">
+  <base target="_top">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="card-wrapper">
+    
+    <div class="nav-container">
+      <div class="main-nav">
+        <button class="nav-btn active" onclick="switchMain('top', this)">🏠 ホーム</button>
+        <button class="nav-btn" onclick="switchMain('input', this)">✍️ 入力</button>
+        <button class="nav-btn" onclick="switchMain('portfolio', this)">💼 持ち株</button>
+      </div>
+      <div class="sub-nav">
+        <button class="sub-nav-btn" onclick="goToHistory('株', this)">📈 株</button>
+        <button class="sub-nav-btn" onclick="goToHistory('パチンコ', this)">🎰 パチンコ</button>
+        <button class="sub-nav-btn" onclick="goToHistory('競馬', this)">🐎 競馬</button>
+      </div>
+    </div>
+
+    <!-- ホーム画面 -->
+    <div id="view-top" class="view-section active">
+      <div class="quote-box" id="quote-box">ロード中...</div>
+      
+      <div class="grand-total-box">
+        <div class="grand-total-title">現在の2人の総合計成績</div>
+        <div class="grand-total-amount" id="top-total-all">¥0</div>
+      </div>
+      
+      <div class="category-total-list">
+        <div class="cat-total-item">
+          <span>📈 株 (確定分)</span>
+          <span class="amt" id="top-total-kabu">¥0</span>
+        </div>
+        <div class="cat-total-item" style="border-bottom: 2px solid #555; padding-bottom: 15px; margin-bottom: 5px;">
+          <span>💼 持ち株 (評価損益)</span>
+          <span class="amt" id="top-total-portfolio">¥0</span>
+        </div>
+        <div class="cat-total-item" style="padding-top: 10px;">
+          <span>🎰 パチンコ</span>
+          <span class="amt" id="top-total-pachi">¥0</span>
+        </div>
+        <div class="cat-total-item">
+          <span>🐎 競馬</span>
+          <span class="amt" id="top-total-keiba">¥0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 入力画面 -->
+    <div id="view-input" class="view-section">
+      <div class="top-title">✍️ 収支の入力</div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('株', this)">株</button>
+        <button class="tab-btn" onclick="switchTab('パチンコ', this)">パチンコ</button>
+        <button class="tab-btn" onclick="switchTab('競馬', this)">競馬</button>
+      </div>
+
+      <form id="recordForm">
+        <!-- 凱入力 -->
+        <div class="person-area area-gai">
+          <div class="person-header">
+            <img src="https://i.ibb.co/23K2Hrv3/hachiware-768x529.jpg" class="char-icon" alt="凱">
+            <div class="person-name-text">凱の入力</div>
+          </div>
+          <div class="form-group"><label>日付</label><input type="date" id="gai-date" required></div>
+          
+          <div class="page-kabu active">
+            <div class="form-group"><label>銘柄名</label><input type="text" id="gai-kabu-name" placeholder="例: トヨタ"></div>
+            <div class="form-group"><label>確定収支</label><input type="number" id="gai-kabu-profit" placeholder="利益なら＋、損失なら－"></div>
+          </div>
+          <div class="page-gamble">
+            <div class="form-group"><label>投資 (使った額)</label><input type="number" id="gai-gamble-invest" min="0" placeholder="0"></div>
+            <div class="form-group"><label>回収 (戻った額)</label><input type="number" id="gai-gamble-return" min="0" placeholder="0"></div>
+          </div>
+          
+          <div class="form-group"><label>備考</label><input type="text" id="gai-notes" placeholder="任意入力"></div>
+        </div>
+
+        <!-- 史弥入力 -->
+        <div class="person-area area-fumiya">
+          <div class="person-header">
+            <img src="https://i.ibb.co/9HTwPnfm/kurimanjyu-768x539.jpg" class="char-icon" alt="史弥">
+            <div class="person-name-text">史弥の入力</div>
+          </div>
+          <div class="form-group"><label>日付</label><input type="date" id="fumiya-date" required></div>
+          
+          <div class="page-kabu active">
+            <div class="form-group"><label>銘柄名</label><input type="text" id="fumiya-kabu-name" placeholder="例: 任天堂"></div>
+            <div class="form-group"><label>確定収支</label><input type="number" id="fumiya-kabu-profit" placeholder="利益なら＋、損失なら－"></div>
+          </div>
+          <div class="page-gamble">
+            <div class="form-group"><label>投資 (使った額)</label><input type="number" id="fumiya-gamble-invest" min="0" placeholder="0"></div>
+            <div class="form-group"><label>回収 (戻った額)</label><input type="number" id="fumiya-gamble-return" min="0" placeholder="0"></div>
+          </div>
+          
+          <div class="form-group"><label>備考</label><input type="text" id="fumiya-notes" placeholder="任意入力"></div>
+        </div>
+
+        <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">一括登録する</button>
+        <div id="message" style="margin-top:15px; text-align:center; font-weight:bold;"></div>
+      </form>
+    </div>
+
+    <!-- 持ち株画面 -->
+    <div id="view-portfolio" class="view-section">
+      <div class="top-title">💼 現在の持ち株リスト</div>
+      <p style="font-size:12px; color:#aaa; margin-bottom:15px; text-align:center;">
+        ※現在の株価は楽天証券等から裏側で自動取得して実際の損益を計算します。
+      </p>
+
+      <div class="card" style="border: 2px solid #555;">
+        <h3 style="margin-top:0; font-size:15px; border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:15px; color:#90caf9;">➕ 持ち株に新規追加</h3>
+        <form id="portfolioForm">
+          <div class="form-group">
+            <label>誰の持ち株？</label>
+            <select id="port-name">
+              <option value="凱">凱</option>
+              <option value="史弥">史弥</option>
+            </select>
+          </div>
+          <div class="form-group"><label>銘柄コード (半角4桁)</label><input type="text" id="port-code" placeholder="例: 7203" required></div>
+          <div class="form-group"><label>企業名</label><input type="text" id="port-item" placeholder="例: トヨタ自動車" required></div>
+          <div class="form-group"><label>保有株数</label><input type="number" id="port-amount" placeholder="例: 100" required></div>
+          <div class="form-group"><label>平均取得単価 (1株)</label><input type="number" id="port-price" placeholder="例: 3500" required></div>
+          
+          <button type="button" class="submit-btn" id="portSubmitBtn" style="background-color:#1565c0; font-size:16px; padding:12px;" onclick="submitPortfolio()">ポートフォリオに追加</button>
+          <div id="port-message" style="margin-top:10px; text-align:center; font-weight:bold; font-size:14px;"></div>
+        </form>
+      </div>
+
+      <div id="portfolio-list">⏳ 株価データを取得中...</div>
+    </div>
+
+    <!-- 履歴・成績画面 -->
+    <div id="view-history" class="view-section">
+      <input type="hidden" id="history-category" value="株">
+      <div class="top-title" id="history-page-title">履歴と成績</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- 編集モーダル -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">✏️ 記録の編集</h3>
+      <input type="hidden" id="edit-category">
+      <input type="hidden" id="edit-row">
+      
+      <div class="form-group"><label>日付</label><input type="date" id="edit-date"></div>
+      <div class="form-group">
+        <label>名前</label>
+        <select id="edit-name"><option value="凱">凱</option><option value="史弥">史弥</option></select>
+      </div>
+      
+      <div id="edit-kabu-fields" style="display:none;">
+        <div class="form-group"><label>銘柄名</label><input type="text" id="edit-kabu-name"></div>
+        <div class="form-group"><label>確定収支</label><input type="number" id="edit-kabu-profit"></div>
+      </div>
+      
+      <div id="edit-gamble-fields" style="display:none;">
+        <div class="form-group"><label>投資</label><input type="number" id="edit-gamble-invest"></div>
+        <div class="form-group"><label>回収</label><input type="number" id="edit-gamble-return"></div>
+      </div>
+      
+      <div class="form-group"><label>備考</label><input type="text" id="edit-notes"></div>
+      
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button onclick="saveEdit()" class="submit-btn" style="margin-top:0;">保存</button>
+        <button onclick="closeModal()" class="submit-btn" style="background:#555; margin-top:0;">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
