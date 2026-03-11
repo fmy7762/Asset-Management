@@ -78,7 +78,6 @@
     .modal-content h3 { color: #e0e0e0; border-bottom-color: #333; }
     
     .view-section { display: none; }
-    .view-section[id="view-top"] { display: block; } /* fallback before JS loads */
     .view-section.active { display: block !important; }
     .page-kabu, .page-gamble { display: none; }
     .page-kabu.active, .page-gamble.active { display: block; }
