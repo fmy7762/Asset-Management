@@ -445,18 +445,22 @@ function renderKabuHistory(data) {
   const container = document.getElementById('history-list');
   const status = data.status;
   const history = data.history;
+  const unsettledRecords = data.unsettledRecords || [];
   
   let gColor = getAmtClass(status.gai);
   let fColor = getAmtClass(status.fumiya);
   let total = status.gai + status.fumiya;
   let tColor = getAmtClass(total);
 
+  // 全期間トータル = 確定済み履歴 + 未清算
   let totalGaiKabu = 0;
   let totalFumiyaKabu = 0;
   history.forEach(item => {
     if (item.name === '凱') totalGaiKabu += Number(item.col4) || 0;
     if (item.name === '史弥') totalFumiyaKabu += Number(item.col4) || 0;
   });
+  totalGaiKabu += status.gai;
+  totalFumiyaKabu += status.fumiya;
   let totalAllKabu = totalGaiKabu + totalFumiyaKabu;
 
   let diff = Math.abs(status.fumiya - status.gai) / 2;
@@ -472,6 +476,19 @@ function renderKabuHistory(data) {
      settlementHtml = `<span style="font-size:18px; font-weight:bold; color:#4CAF50;">✨ 現在、差額はありません ✨</span>`;
   }
 
+  // 各人の取引明細を生成
+  let gaiDetails = '';
+  let fumiyaDetails = '';
+  unsettledRecords.forEach(item => {
+    let pClass = item.profit < 0 ? "minus-text" : "plus-text";
+    let line = `<div style="display:flex; justify-content:space-between; font-size:11px; padding:2px 0; color:#ccc;"><span>${item.itemName}</span><span class="${pClass}">${formatAmt(item.profit)}</span></div>`;
+    if (item.name === '凱') gaiDetails += line;
+    else if (item.name === '史弥') fumiyaDetails += line;
+  });
+
+  let perPerson = total / 2;
+  let perPersonColor = getAmtClass(perPerson);
+
   let html = `
     <div class="card" style="padding: 20px; border:2px solid #ffb74d; margin-bottom: 25px; background:#2a1c0a;">
       <h3 style="margin-top:0; margin-bottom:20px; text-align:center; font-size:16px; color:#e0e0e0;">📊 株の未清算ステータス</h3>
@@ -480,16 +497,19 @@ function renderKabuHistory(data) {
         <div style="text-align:center; background:#1b2e1b; padding:10px; border-radius:8px; border:1px solid #2e4c2e; width:45%;">
           <div style="font-weight:bold; margin-bottom:5px; display:flex; align-items:center; justify-content:center; color:#e0e0e0;">${getIconHTML('凱')} 凱</div>
           <div style="font-size:18px; font-weight:bold;" class="${gColor}">${formatAmt(status.gai)}</div>
+          ${gaiDetails ? '<div style="margin-top:8px; border-top:1px dashed #555; padding-top:5px;">' + gaiDetails + '</div>' : ''}
         </div>
         <div style="text-align:center; background:#1b222e; padding:10px; border-radius:8px; border:1px solid #2e374c; width:45%;">
           <div style="font-weight:bold; margin-bottom:5px; display:flex; align-items:center; justify-content:center; color:#e0e0e0;">${getIconHTML('史弥')} 史弥</div>
           <div style="font-size:18px; font-weight:bold;" class="${fColor}">${formatAmt(status.fumiya)}</div>
+          ${fumiyaDetails ? '<div style="margin-top:8px; border-top:1px dashed #555; padding-top:5px;">' + fumiyaDetails + '</div>' : ''}
         </div>
       </div>
 
       <div style="text-align:center; padding:10px; background:#333; border-radius:8px; margin-bottom:15px;">
         <span style="font-size:14px; font-weight:bold; color:#bbb;">👥 2人の未清算合計</span><br>
         <span style="font-size:22px; font-weight:bold;" class="${tColor}">${formatAmt(total)}</span>
+        <span style="font-size:13px; color:#aaa; margin-left:8px;">（1人あたり <span class="${perPersonColor}" style="font-weight:bold;">${formatAmt(perPerson)}</span>）</span>
       </div>
 
       <div style="text-align:center; padding:15px; background:#3e2723; border:2px solid #5d4037; border-radius:12px; margin-bottom:15px;">
@@ -497,9 +517,33 @@ function renderKabuHistory(data) {
         ${settlementHtml}
       </div>
       
-      <button onclick="doClearKabuAll()" class="submit-btn" style="background-color:#2e7d32; margin:0;">🔄 清算する</button>
+      <button onclick="doClearKabuAll()" class="submit-btn" style="background-color:#2e7d32; margin:0;">🔄 清算する（確定済みに移動）</button>
     </div>
+  `;
 
+  // 未清算の明細一覧
+  if (unsettledRecords.length > 0) {
+    html += `<h3 style="margin-top:20px; margin-bottom:10px; border-bottom:2px solid #ff9800; padding-bottom:5px; color:#ffb74d;">📋 未清算の明細（${unsettledRecords.length}件）</h3>`;
+    html += `<div style="border-radius: 8px; border: 1px solid #5d4037; overflow: hidden; margin-bottom:25px;">`;
+    unsettledRecords.forEach(item => {
+      let pClass = item.profit < 0 ? "minus-text" : "plus-text";
+      html += `
+        <div class="history-card" style="border-color:#5d4037; background:#2a1c0a;">
+          <div class="history-header">
+            <span>📅 ${item.date}</span>
+            <span style="display:flex; align-items:center;">${getIconHTML(item.name)} <b>${item.name}</b></span>
+          </div>
+          <div class="history-title">🏢 銘柄: ${item.itemName}</div>
+          <div class="history-profit ${pClass}">収支: ${formatAmt(item.profit)}</div>
+          <div class="history-notes">🗒️ 備考: ${item.notes || "なし"}</div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  // 全期間トータル
+  html += `
     <div class="card" style="padding: 20px; border:2px solid #2e7d32; margin-bottom: 25px; background:#0a1a0a;">
       <h3 style="margin-top:0; margin-bottom:20px; text-align:center; font-size:16px; color:#e0e0e0;">📈 株の全期間トータル成績</h3>
       
