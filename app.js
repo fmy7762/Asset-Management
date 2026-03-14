@@ -157,16 +157,44 @@ function switchTab(category, btnElement) {
 // ============================================================
 async function fetchStockPrice(code) {
   const symbol = code + '.T';
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+  // 方法①: corsproxy.io 経由 Yahoo Finance
   try {
-    const res  = await fetch(proxy);
-    const json = await res.json();
-    const data = JSON.parse(json.contents);
+    const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
+    const data  = await res.json();
     const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
     if (price && price > 0) return Math.round(price);
   } catch(e) {}
-  return 0; // 取得失敗時
+
+  // 方法②: allorigins.win 経由 Yahoo Finance
+  try {
+    const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
+    const json  = await res.json();
+    const data  = JSON.parse(json.contents);
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price && price > 0) return Math.round(price);
+  } catch(e) {}
+
+  // 方法③: stooq.com (CSV形式)
+  try {
+    const stooqCode = code + '.jp';
+    const url   = `https://stooq.com/q/l/?s=${stooqCode}&f=sd2t2ohlcv&h&e=csv`;
+    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
+    const text  = await res.text();
+    const lines = text.trim().split('\n');
+    if (lines.length >= 2) {
+      const cols  = lines[1].split(',');
+      const price = parseFloat(cols[4]);
+      if (price && price > 0) return Math.round(price);
+    }
+  } catch(e) {}
+
+  return 0;
 }
 
 // ============================================================
