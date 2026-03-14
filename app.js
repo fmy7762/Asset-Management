@@ -1,14 +1,14 @@
 // ============================================================
 //  設定エリア — ここだけ書き換えてください
 // ============================================================
-const JSONBIN_API_KEY = 'YOUR_JSONBIN_API_KEY_HERE'; // JSONBinのAPIキー($2a$...)
+const JSONBIN_API_KEY = '$2a$10$WDGQTE/btFlRftllospkteq7ZV7vhhVc00FWwTSY0SnuHjPUPHKsK'; // JSONBinのAPIキー($2a$...)
 
 const BIN_IDS = {
-  kabu_unsettled : 'YOUR_BIN_ID_KABU_UNSETTLED', // 株（未清算）
-  kabu_history   : 'YOUR_BIN_ID_KABU_HISTORY',   // 株（確定済み）
-  pachinko       : 'YOUR_BIN_ID_PACHINKO',        // パチンコ
-  keiba          : 'YOUR_BIN_ID_KEIBA',           // 競馬
-  portfolio      : 'YOUR_BIN_ID_PORTFOLIO',       // 持ち株
+  kabu_unsettled : '69b55d3aaa77b81da9e3d759',
+  kabu_history   : '69b55d3bc3097a1dd524aee1',
+  pachinko       : '69b55d3caa77b81da9e3d767',
+  keiba          : '69b55d3db7ec241ddc6a026a',
+  portfolio      : '69b55d3eaa77b81da9e3d76f',
 };
 // ============================================================
 
