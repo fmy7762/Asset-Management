@@ -3,6 +3,8 @@
 // ============================================================
 const JSONBIN_API_KEY = '$2a$10$WDGQTE/btFlRftllospkteq7ZV7vhhVc00FWwTSY0SnuHjPUPHKsK'; // JSONBinのAPIキー($2a$...)
 
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzBiFlzV_Snc6hCXKjlCkmKiaqX54-8vxTTEZbdtsfVBG3vgu6nuWZrbml_fRVCpQfs/exec'; // GASのWebアプリURL（株価取得用）
+
 const BIN_IDS = {
   kabu_unsettled : '69b55d3aaa77b81da9e3d759',
   kabu_history   : '69b55d3bc3097a1dd524aee1',
@@ -156,45 +158,39 @@ function switchTab(category, btnElement) {
 //  株価取得（Yahoo Finance非公式API → CORSプロキシ経由）
 // ============================================================
 async function fetchStockPrice(code) {
-  const symbol = code + '.T';
-
-  // 方法①: corsproxy.io 経由 Yahoo Finance
+  // GASのスプレッドシート（F列）から株価を取得
+  if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') return 0;
   try {
-    const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
-    const data  = await res.json();
-    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (price && price > 0) return Math.round(price);
-  } catch(e) {}
-
-  // 方法②: allorigins.win 経由 Yahoo Finance
-  try {
-    const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
-    const json  = await res.json();
-    const data  = JSON.parse(json.contents);
-    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (price && price > 0) return Math.round(price);
-  } catch(e) {}
-
-  // 方法③: stooq.com (CSV形式)
-  try {
-    const stooqCode = code + '.jp';
-    const url   = `https://stooq.com/q/l/?s=${stooqCode}&f=sd2t2ohlcv&h&e=csv`;
-    const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res   = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
-    const text  = await res.text();
-    const lines = text.trim().split('\n');
-    if (lines.length >= 2) {
-      const cols  = lines[1].split(',');
-      const price = parseFloat(cols[4]);
-      if (price && price > 0) return Math.round(price);
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ method: 'getStockPrices' })
+    });
+    const json = await res.json();
+    if (json.status === 'ok' && json.data) {
+      return Number(json.data[String(code)]) || 0;
     }
   } catch(e) {}
-
   return 0;
+}
+
+// 全銘柄の株価を一括取得（キャッシュ付き）
+async function fetchAllStockPrices() {
+  if (appCache.stockPrices) return appCache.stockPrices;
+  if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') return {};
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ method: 'getStockPrices' })
+    });
+    const json = await res.json();
+    if (json.status === 'ok' && json.data) {
+      appCache.stockPrices = json.data;
+      return json.data;
+    }
+  } catch(e) {}
+  return {};
 }
 
 // ============================================================
@@ -229,7 +225,8 @@ async function loadTotals() {
     let portfolioTotal = 0;
     const codes = [...new Set((portfolio.records || []).map(r => r.code))];
     const prices = {};
-    await Promise.all(codes.map(async c => { prices[c] = await fetchStockPrice(c); }));
+    const allPrices = await fetchAllStockPrices();
+    codes.forEach(c => { prices[c] = Number(allPrices[c]) || 0; });
     (portfolio.records || []).forEach(r => {
       const cur = prices[r.code] || 0;
       portfolioTotal += (cur - Number(r.buyPrice)) * Number(r.amount);
@@ -371,7 +368,8 @@ async function loadPortfolio() {
     // 銘柄コードごとに株価を一括取得
     const codes  = [...new Set(records.map(r => r.code))];
     const prices = {};
-    await Promise.all(codes.map(async c => { prices[c] = await fetchStockPrice(c); }));
+    const allPrices2 = await fetchAllStockPrices();
+    codes.forEach(c => { prices[c] = Number(allPrices2[c]) || 0; });
 
     // profitとcurrentPriceを付与
     const enriched = records.map(r => ({
