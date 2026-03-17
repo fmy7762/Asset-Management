@@ -347,7 +347,8 @@ function renderPortfolio(data) {
             <div class="history-profit ${pClass}" style="margin:0; font-size:15px;">${formatAmt(item.profit)}</div>
           </div>
           <div class="history-actions">
-             <button class="action-btn edit-btn" style="background:#1565c0; color:#fff; border-color:#0d47a1;" data-item="${encodedItem}" onclick='sellPortfolio(this)'>💰 売却して確定</button>
+             <button class="action-btn edit-btn" style="background:#1565c0; color:#fff; border-color:#0d47a1;" data-item="${encodedItem}" onclick='sellPortfolio(this)'>💰 全部売却</button>
+             <button class="action-btn edit-btn" style="background:#6a1b9a; color:#fff; border-color:#4a148c;" data-item="${encodedItem}" onclick='partialSellPortfolio(this)'>📊 一部売却</button>
              <button class="action-btn del-btn" onclick='deletePortfolio(${item.row})'>🗑️ 削除のみ</button>
           </div>
         </div>
@@ -421,6 +422,86 @@ function sellPortfolio(btnElement) {
     alert(msg);
     clearAppCache(); 
     loadPortfolio(); 
+  });
+}
+
+function partialSellPortfolio(btnElement) {
+  const itemStr = decodeURIComponent(btnElement.getAttribute('data-item'));
+  const item = JSON.parse(itemStr);
+
+  // 売却株数入力
+  let sellAmountStr = prompt(
+    `【${item.itemName}】の一部売却\n\n` +
+    `現在の保有株数: ${item.amount}株\n` +
+    `取得単価: ¥${item.buyPrice}\n\n` +
+    `売却する株数を入力してください（1〜${item.amount - 1}）：`
+  );
+  if (sellAmountStr === null || sellAmountStr === "") return;
+  const sellAmount = Number(sellAmountStr);
+  if (isNaN(sellAmount) || sellAmount <= 0 || sellAmount >= item.amount) {
+    alert(`1〜${item.amount - 1}の範囲で入力してください。\n全株売却する場合は「全部売却」ボタンを使ってください。`);
+    return;
+  }
+
+  // 売却単価入力
+  let sellPriceStr = prompt(
+    `【${item.itemName}】一部売却\n\n` +
+    `売却株数: ${sellAmount}株\n` +
+    `現在の参考価格: ¥${item.currentPrice}\n\n` +
+    `1株あたりの売却価格を入力してください：`,
+    item.currentPrice
+  );
+  if (sellPriceStr === null || sellPriceStr === "") return;
+  const sellPrice = Number(sellPriceStr);
+  if (isNaN(sellPrice) || sellPrice <= 0) {
+    alert("正しい数値を入力してください。");
+    return;
+  }
+
+  // 計算
+  const finalProfit = Math.round((sellPrice - item.buyPrice) * sellAmount);
+  const remainAmount = item.amount - sellAmount;
+  // 平均取得単価は変わらない（残株の取得単価はそのまま）
+  const remainBuyPrice = item.buyPrice;
+
+  if (!confirm(
+    `【${item.itemName}】一部売却の確認\n\n` +
+    `売却株数: ${sellAmount}株 × ¥${sellPrice.toLocaleString()}\n` +
+    `確定損益: ¥${finalProfit.toLocaleString()}\n\n` +
+    `売却後の残り保有:\n` +
+    `  株数: ${remainAmount}株\n` +
+    `  平均取得単価: ¥${remainBuyPrice.toLocaleString()}\n\n` +
+    `この内容で処理しますか？`
+  )) return;
+
+  document.getElementById('portfolio-list').innerHTML = "⏳ 一部売却処理中...";
+
+  const today = new Date();
+  const dateStr = today.getFullYear() + '-'
+    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+    + String(today.getDate()).padStart(2, '0');
+
+  const sellData = {
+    row: item.row,
+    name: item.name,
+    itemName: item.itemName,
+    sellAmount: sellAmount,
+    sellPrice: sellPrice,
+    profit: finalProfit,
+    remainAmount: remainAmount,
+    remainBuyPrice: remainBuyPrice,
+    date: dateStr,
+    notes: `一部売却 (${sellAmount}株 × ¥${sellPrice} = ¥${finalProfit.toLocaleString()})`
+  };
+
+  callGAS('partialSellPortfolioRecord', sellData).then(function(msg) {
+    alert(msg);
+    clearAppCache();
+    loadPortfolio();
+  }).catch(function(err) {
+    alert("エラー: " + err.message);
+    clearAppCache();
+    loadPortfolio();
   });
 }
 
