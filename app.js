@@ -429,11 +429,11 @@ function partialSellPortfolio(btnElement) {
   const itemStr = decodeURIComponent(btnElement.getAttribute('data-item'));
   const item = JSON.parse(itemStr);
 
-  // 売却株数入力
+  // 1. 売却株数入力
   let sellAmountStr = prompt(
     `【${item.itemName}】の一部売却\n\n` +
     `現在の保有株数: ${item.amount}株\n` +
-    `取得単価: ¥${item.buyPrice}\n\n` +
+    `平均取得単価: ¥${item.buyPrice}\n\n` +
     `売却する株数を入力してください（1〜${item.amount - 1}）：`
   );
   if (sellAmountStr === null || sellAmountStr === "") return;
@@ -443,12 +443,27 @@ function partialSellPortfolio(btnElement) {
     return;
   }
 
-  // 売却単価入力
+  // 2. 【追加】今回売却する株の「取得単価」を入力
+  let sellBuyPriceStr = prompt(
+    `【${item.itemName}】一部売却\n\n` +
+    `現在の平均取得単価: ¥${item.buyPrice}\n\n` +
+    `今回売却する ${sellAmount}株 の「取得単価」を入力してください：`,
+    item.buyPrice // デフォルト値は現在の平均取得単価を入れておく
+  );
+  if (sellBuyPriceStr === null || sellBuyPriceStr === "") return;
+  const sellBuyPrice = Number(sellBuyPriceStr);
+  if (isNaN(sellBuyPrice) || sellBuyPrice <= 0) {
+    alert("正しい数値を入力してください。");
+    return;
+  }
+
+  // 3. 売却単価（実際に売れた価格）入力
   let sellPriceStr = prompt(
     `【${item.itemName}】一部売却\n\n` +
     `売却株数: ${sellAmount}株\n` +
+    `取得単価(今回): ¥${sellBuyPrice}\n` +
     `現在の参考価格: ¥${item.currentPrice}\n\n` +
-    `1株あたりの売却価格を入力してください：`,
+    `1株あたりの「売却価格」を入力してください：`,
     item.currentPrice
   );
   if (sellPriceStr === null || sellPriceStr === "") return;
@@ -458,19 +473,24 @@ function partialSellPortfolio(btnElement) {
     return;
   }
 
-  // 計算
-  const finalProfit = Math.round((sellPrice - item.buyPrice) * sellAmount);
+  // 4. 計算処理
+  const finalProfit = Math.round((sellPrice - sellBuyPrice) * sellAmount);
   const remainAmount = item.amount - sellAmount;
-  // 平均取得単価は変わらない（残株の取得単価はそのまま）
-  const remainBuyPrice = item.buyPrice;
+  
+  // 【変更】残り株の新しい平均取得単価を計算
+  // (全体の総取得額 - 今回売却分の総取得額) ÷ 残り株数
+  const totalBookValue = item.amount * item.buyPrice;
+  const soldBookValue = sellAmount * sellBuyPrice;
+  const remainBuyPrice = Math.round((totalBookValue - soldBookValue) / remainAmount);
 
   if (!confirm(
     `【${item.itemName}】一部売却の確認\n\n` +
-    `売却株数: ${sellAmount}株 × ¥${sellPrice.toLocaleString()}\n` +
+    `売却株数: ${sellAmount}株\n` +
+    `今回取得単価: ¥${sellBuyPrice.toLocaleString()} → 売却価格: ¥${sellPrice.toLocaleString()}\n` +
     `確定損益: ¥${finalProfit.toLocaleString()}\n\n` +
     `売却後の残り保有:\n` +
     `  株数: ${remainAmount}株\n` +
-    `  平均取得単価: ¥${remainBuyPrice.toLocaleString()}\n\n` +
+    `  新しい平均取得単価: ¥${remainBuyPrice.toLocaleString()}\n\n` +
     `この内容で処理しますか？`
   )) return;
 
@@ -491,7 +511,7 @@ function partialSellPortfolio(btnElement) {
     remainAmount: remainAmount,
     remainBuyPrice: remainBuyPrice,
     date: dateStr,
-    notes: `一部売却 (${sellAmount}株 × ¥${sellPrice} = ¥${finalProfit.toLocaleString()})`
+    notes: `一部売却 (${sellAmount}株: 取得¥${sellBuyPrice} → 売却¥${sellPrice} = ¥${finalProfit.toLocaleString()})`
   };
 
   callGAS('partialSellPortfolioRecord', sellData).then(function(msg) {
